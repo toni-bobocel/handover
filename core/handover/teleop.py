@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 MAX_LINEAR = 0.5  # m/s, whatever the operator's keyboard says
 MAX_ANGULAR = 0.8  # rad/s
 DEADMAN = 0.25  # s without a packet before the robot is stopped
-TICK = 0.05
+TICK = 0.02
 
 
 class Busy(Exception):

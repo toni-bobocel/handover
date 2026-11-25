@@ -21,7 +21,7 @@ from .geofence import Guard, Zone
 from .model import Event, Status, Telemetry
 from .rules import Limits, Watcher
 from .store import Store
-from .teleop import Busy, Teleop
+from .teleop import MAX_ANGULAR, MAX_LINEAR, Busy, Teleop
 
 log = logging.getLogger("handover")
 
@@ -171,7 +171,8 @@ def create(config_path: Path) -> FastAPI:
         except (HTTPException, Unsupported, Busy) as e:
             await ws.close(code=4409, reason=str(getattr(e, "detail", e))[:120])
             return
-        await ws.send_text(json.dumps({"type": "granted", "robot": id, "limits": {"linear": 0.5, "angular": 0.8}}))
+        limits = {"linear": MAX_LINEAR, "angular": MAX_ANGULAR}
+        await ws.send_text(json.dumps({"type": "granted", "robot": id, "limits": limits}))
         try:
             while True:
                 m = json.loads(await ws.receive_text())
