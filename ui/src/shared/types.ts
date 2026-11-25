@@ -63,6 +63,8 @@ export interface Incident {
   bundle: string | null
   head: string | null
   bytes: number | null
+  /** when retention removed the file; it may still be in the export folder */
+  pruned?: number | null
 }
 
 export type Failure = 'obstacle' | 'battery' | 'estop' | 'link'

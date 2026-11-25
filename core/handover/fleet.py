@@ -15,6 +15,7 @@ class Config:
     zones: list[dict] = field(default_factory=list)
     plan: dict = field(default_factory=dict)
     auth: dict = field(default_factory=dict)
+    blackbox: dict = field(default_factory=dict)
     sim_url: str | None = None
     tls: bool = False
     tls_names: list[str] = field(default_factory=list)
@@ -31,6 +32,7 @@ def load(path: Path) -> Config:
         zones=raw.get("zone", []),
         plan=raw.get("plan", {}),
         auth=raw.get("auth", {}),
+        blackbox=raw.get("blackbox", {}),
         sim_url=site.get("simulator"),
         tls=bool(site.get("tls")),
         tls_names=site.get("tls_names", []),

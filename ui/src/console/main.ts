@@ -146,7 +146,11 @@ async function incidents() {
           const url = can(me, 'operator') ? src.bundleUrl(i) : null
           const pdf = can(me, 'operator') ? src.reportUrl(i) : null
           const head = i.head ? `head ${i.head.slice(0, 16)}… ${kb(i.bytes)}` : '<span class="pending">recording…</span>'
-          const files = url ? ` <a class="act" href="${url}" download>.rbox</a> <a class="act" href="${pdf}" download>pdf</a>` : ''
+          const files = url
+            ? ` <a class="act" href="${url}" download>.rbox</a> <a class="act" href="${pdf}" download>pdf</a>`
+            : i.pruned
+              ? ' · removed by retention'
+              : ''
           return `<li><b>${i.kind.replace('_', ' ')} · ${i.robot}</b><span>${new Date(i.t * 1000).toLocaleTimeString()} · ${head}${files}</span></li>`
         })
         .join('')

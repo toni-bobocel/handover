@@ -1,6 +1,7 @@
 import json
 import sqlite3
 import threading
+import time
 from pathlib import Path
 
 SCHEMA = """
@@ -40,6 +41,10 @@ class Store:
         self.db.execute("pragma journal_mode=wal")
         self.db.execute("pragma synchronous=normal")
         self.db.executescript(SCHEMA)
+        columns = {r[1] for r in self.db.execute("pragma table_info(incident)")}
+        if "pruned" not in columns:
+            # added after the first release: when retention removed the bundle file
+            self.db.execute("alter table incident add column pruned real")
         self._lock = threading.Lock()
 
     def _x(self, sql: str, args=()) -> list[sqlite3.Row]:
@@ -51,6 +56,9 @@ class Store:
 
     def seal_incident(self, id: str, bundle: str, head: str, size: int) -> None:
         self._x("update incident set bundle = ?, head = ?, bytes = ? where id = ?", (bundle, head, size, id))
+
+    def prune_incident(self, id: str) -> None:
+        self._x("update incident set pruned = ? where id = ?", (time.time(), id))
 
     def incidents(self, limit: int = 50) -> list[dict]:
         return [dict(r) for r in self._x("select * from incident order by t desc limit ?", (limit,))]

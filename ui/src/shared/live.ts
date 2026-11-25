@@ -71,7 +71,7 @@ export async function liveSource(): Promise<Source | null> {
       await fetch(`${base}/api/zones/${encodeURIComponent(id)}`, { method: 'DELETE' })
     },
     zones: async () => ((await (await fetch(`${base}/api/site`)).json()) as Site).zones as Zone[],
-    bundleUrl: i => (i.bundle ? `${base}/api/incidents/${i.id}/bundle` : null),
-    reportUrl: i => (i.bundle ? `${base}/api/incidents/${i.id}/report.pdf` : null),
+    bundleUrl: i => (i.bundle && !i.pruned ? `${base}/api/incidents/${i.id}/bundle` : null),
+    reportUrl: i => (i.bundle && !i.pruned ? `${base}/api/incidents/${i.id}/report.pdf` : null),
   }
 }

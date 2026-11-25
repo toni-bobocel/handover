@@ -17,6 +17,7 @@ import hashlib
 import html
 import io
 import json
+import os
 import sys
 import zipfile
 from datetime import UTC, datetime
@@ -46,12 +47,16 @@ def chain(records: list[dict]) -> tuple[list[dict], str]:
 
 def load_key(path: Path) -> Ed25519PrivateKey:
     if path.exists():
+        if os.name == "posix" and path.stat().st_mode & 0o077:
+            # anyone who can read this key can sign bundles in the site's name
+            raise PermissionError(f"{path} is readable by other users; chmod 600 it")
         return serialization.load_pem_private_key(path.read_bytes(), password=None)
     key = Ed25519PrivateKey.generate()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(key.private_bytes(
         serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()
     ))
+    path.chmod(0o600)
     path.with_suffix(".pub").write_bytes(public_pem(key.public_key()))
     return key
 

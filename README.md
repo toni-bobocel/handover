@@ -31,6 +31,8 @@ docker compose exec core handover --config /etc/handover/fleet.toml users add an
 
 Accounts have one of four roles: a viewer sees the floor and the incidents, an operator also pauses and resumes robots and downloads bundles, a driver takes the wheel, an admin edits zones. Passwords are scrypt hashes in `users.toml` in the data volume; sessions are signed cookies that last twelve hours, and removing an account ends its sessions at once. REST robots can be given a token each (`token = "…"` in fleet.toml) so nothing else on the network can post positions in their name. The demo sets `[auth] open = true` and has no accounts.
 
+Bundles are kept a year or up to 5 GB by default (`[blackbox] keep_days`, `max_mb`). Give `export = "/mnt/nas/handover"` and every sealed bundle is also copied there; retention never deletes one that has not been copied. `key = "/run/secrets/site.key"` keeps the signing key off the data volume, and the core refuses a key file other users can read. If the core dies while an incident is open, the seconds before the trigger were already written and are kept as a partial bundle on the next start.
+
 On a site, `tls = true` in fleet.toml serves the console over HTTPS. With no certificate from the plant's IT in `data/tls/`, the core makes a self-signed one on first start for the names in `tls_names` and logs its SHA-256 fingerprint, to be checked once when the browsers are set up. `deploy/site/` has a broker config that refuses anonymous clients and listens on TLS only, and a fleet.toml to start from; set `HANDOVER_MQTT=./deploy/site` to use it.
 
 Without Docker:
@@ -75,7 +77,7 @@ With the simulator streaming three robots, the core sits at about 74 MB of RAM o
 
 - **No video yet.** The black box records telemetry and events, not the camera. The plan is MediaMTX as a sidecar, WebRTC with host candidates only so nothing leaves the LAN, and the ring buffer keeping the last sixty seconds of encoded frames rather than decoded ones. ADR 3 explains why control and video travel separately.
 - **One process means one machine.** Ring buffers and teleop sessions live in memory. For a site with a few dozen robots that is the point; for two hundred I would split the adapters into their own processes behind a broker and keep the recorder next to them.
-- **The signature proves the bundle was not changed after the site sealed it.** It does not prove the robot told the truth, and anyone with the site's private key can sign anything. The key lives in the data volume; a real deployment should put it in a TPM or at least on a separate mount.
+- **The signature proves the bundle was not changed after the site sealed it.** It does not prove the robot told the truth, and anyone with the site's private key can sign anything. The key can sit on its own mount; a TPM would be better and is not done.
 - **Accounts are local.** A plant with SSO would want it behind its identity provider; the session check is one function to swap. Teleop would also deserve a second factor, ideally a physical enable switch next to the operator's screen.
 - **The ROS 2 adapter talks to rosbridge**, not DDS. It means no ROS installation next to the core and one WebSocket per robot, at the cost of JSON on the wire. Fine at 10 Hz; not for point clouds.
 

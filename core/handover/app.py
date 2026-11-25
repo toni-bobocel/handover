@@ -41,10 +41,14 @@ def create(config_path: Path) -> FastAPI:
     for z in cfg.zones:
         if not any(s["id"] == z["id"] for s in store.zones()):
             store.put_zone(z)
-    key = load_key(cfg.data / "site.key")
+    bb = cfg.blackbox
+    # the key can live on its own mount (a Docker secret, a USB key in a safe) away from the data
+    key = load_key(Path(bb.get("key", cfg.data / "site.key")))
     r = cfg.rules
     recorder = Recorder(bus, store, key, cfg.data / "incidents", cfg.site,
-                        before=r.get("before", 30), after=r.get("after", 30))
+                        before=r.get("before", 30), after=r.get("after", 30),
+                        export=Path(bb["export"]) if bb.get("export") else None)
+    recorder.recover()
     watcher = Watcher(bus, fleet, Limits(
         battery_low=r.get("battery_low", 0.10),
         link_lost_after=r.get("link_lost_after", 3.0),
@@ -85,6 +89,11 @@ def create(config_path: Path) -> FastAPI:
             d["status"] = Status.NEEDS_ASSISTANCE
         return d
 
+    async def retention() -> None:
+        while True:
+            await asyncio.to_thread(recorder.prune, bb.get("keep_days", 365), int(bb.get("max_mb", 5000)) * 2**20)
+            await asyncio.sleep(3600)
+
     async def audit() -> None:
         async with bus.subscribe() as q:
             while True:
@@ -95,7 +104,7 @@ def create(config_path: Path) -> FastAPI:
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI):
         tasks = [asyncio.create_task(c) for c in (
-            *(a.run() for a in fleet.values()), recorder.run(), watcher.run(), guard.run(), audit(),
+            *(a.run() for a in fleet.values()), recorder.run(), watcher.run(), guard.run(), audit(), retention(),
         )]
         log.info("%s: %d robots, %d zones", cfg.site, len(fleet), len(guard.zones))
         yield
