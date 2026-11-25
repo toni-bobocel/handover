@@ -15,8 +15,10 @@ services:
     volumes:
       - ${HANDOVER_FLEET:-./deploy/demo/fleet.toml}:/etc/handover/fleet.toml:ro
       - handover-data:/data
+      - recordings:/recordings:ro
     depends_on:
       - mosquitto
+      - mediamtx
     restart: unless-stopped
     mem_limit: 300m
 
@@ -33,6 +35,17 @@ services:
     restart: unless-stopped
     mem_limit: 32m
 
+  mediamtx:
+    # the -ffmpeg image, for the demo's simulated cameras; plain mediamtx is enough on a site
+    image: bluenviron/mediamtx:1.21.4-ffmpeg
+    ports:
+      - "8189:8189/udp"
+    volumes:
+      - ./deploy/mediamtx.yml:/mediamtx.yml:ro
+      - recordings:/recordings
+    restart: unless-stopped
+    mem_limit: 256m
+
   simulator:
     profiles: [demo]
     build: simulator
@@ -45,3 +58,10 @@ services:
 
 volumes:
   handover-data:
+  # the camera ring buffer: in RAM, so 75 s of video per camera never touches the SSD
+  recordings:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=512m

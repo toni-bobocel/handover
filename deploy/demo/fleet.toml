@@ -17,6 +17,11 @@ blocked_after = 6
 before = 20
 after = 10
 
+[video]
+# MediaMTX, for live view (WebRTC) and its RAM recordings folder, for the black box
+whep = "http://mediamtx:8889"
+recordings = "/recordings"
+
 [plan]
 width = 48
 height = 28
@@ -58,6 +63,7 @@ label = "Humanoid Inspect 02"
 kind = "Humanoid, inspection rounds"
 protocol = "ros2"
 url = "ws://simulator:9090"
+camera = "cam-humanoid"
 sim_speed = 0.7
 sim_route = [[4, 11], [21, 11], [21, 16.2], [36, 16.2], [36, 26], [4, 26]]
 
@@ -67,5 +73,6 @@ label = "Cleaner Bot 03"
 kind = "Floor scrubber"
 protocol = "rest"
 command_url = "http://simulator:7070/robots/Cleaner-Bot-03/commands"
+camera = "cam-cleaner"
 sim_speed = 0.5
 sim_route = [[23, 6.5], [35, 6.5], [35, 11], [23, 11], [23, 15.6], [36, 15.6], [36, 3], [23, 3]]

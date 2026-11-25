@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from ..bus import Bus
 from ..model import Event, Telemetry
 from ..store import Store
-from . import bundle
+from . import bundle, video
 from .ring import Ring
 
 log = logging.getLogger(__name__)
@@ -23,9 +23,12 @@ TRIGGERS = {"estop", "battery_low", "link_lost", "needs_assistance", "takeover",
 
 class Recorder:
     def __init__(self, bus: Bus, store: Store, key: Ed25519PrivateKey, out: Path,
-                 site: str = "", before: float = 30, after: float = 30, export: Path | None = None):
+                 site: str = "", before: float = 30, after: float = 30, export: Path | None = None,
+                 cameras: dict[str, str] | None = None, recordings: Path | None = None):
         self.bus, self.store, self.key, self.out, self.site = bus, store, key, out, site
         self.export = export
+        self.cameras = cameras or {}
+        self.recordings = recordings
         self.before, self.after = before, after
         # a little longer than the window, so the oldest second is still there when we seal
         self.rings: dict[str, Ring] = defaultdict(lambda: Ring(before + after + 5))
@@ -67,10 +70,17 @@ class Recorder:
         robot, t0 = incident["robot"], incident["t"]
         records = self.rings[robot].window(t0 - self.before, t0)
         draft = {**incident, "after": 0, "partial": True}
-        await asyncio.to_thread(bundle.write, self._partial(incident["id"]), draft, records, self.key)
+        clips = self._clips(robot, t0 - self.before, t0)
+        await asyncio.to_thread(bundle.write, self._partial(incident["id"]), draft, records, self.key, clips)
         if self.open.get(robot) is not incident:
             # sealed while the draft was being written: the draft is no longer needed
             self._partial(incident["id"]).unlink(missing_ok=True)
+
+    def _clips(self, robot: str, start: float, end: float) -> dict[str, bytes]:
+        camera = self.cameras.get(robot)
+        if not camera or not self.recordings:
+            return {}
+        return video.segments(self.recordings, camera, start, end)
 
     def _partial(self, id: str) -> Path:
         return self.out / f"{id}.partial.rbox"
@@ -99,8 +109,10 @@ class Recorder:
         # closed before the first await, so a second caller sees it gone and leaves it alone
         self.open.pop(robot, None)
         records = self.rings[robot].window(t0 - self.before, t0 + self.after)
+        clips = self._clips(robot, t0 - self.before, t0 + self.after)
+        incident = {**incident, "video": sorted(clips)}
         path = self.out / f"{incident['id']}.rbox"
-        head = await asyncio.to_thread(bundle.write, path, incident, records, self.key)
+        head = await asyncio.to_thread(bundle.write, path, incident, records, self.key, clips)
         size = path.stat().st_size
         self.store.seal_incident(incident["id"], path.name, head, size)
         self._partial(incident["id"]).unlink(missing_ok=True)

@@ -45,9 +45,12 @@ def create(config_path: Path) -> FastAPI:
     # the key can live on its own mount (a Docker secret, a USB key in a safe) away from the data
     key = load_key(Path(bb.get("key", cfg.data / "site.key")))
     r = cfg.rules
+    cameras = {rb["id"]: rb["camera"] for rb in cfg.robots if rb.get("camera")}
+    recordings = Path(cfg.video["recordings"]) if cfg.video.get("recordings") else None
     recorder = Recorder(bus, store, key, cfg.data / "incidents", cfg.site,
                         before=r.get("before", 30), after=r.get("after", 30),
-                        export=Path(bb["export"]) if bb.get("export") else None)
+                        export=Path(bb["export"]) if bb.get("export") else None,
+                        cameras=cameras, recordings=recordings)
     recorder.recover()
     watcher = Watcher(bus, fleet, Limits(
         battery_low=r.get("battery_low", 0.10),
@@ -225,6 +228,20 @@ def create(config_path: Path) -> FastAPI:
         store.delete_zone(id)
         guard.zones.pop(id, None)
         bus.publish(Event("zone_changed", "*", {"id": id}))
+
+    @app.post("/api/video/{id}/whep", dependencies=[operator])
+    async def whep(id: str, request: Request):
+        # the browser's offer goes through here so the camera follows the same accounts as
+        # everything else; the media itself then flows straight from MediaMTX over the LAN
+        robot(id)
+        if id not in cameras or not cfg.video.get("whep"):
+            raise HTTPException(404, f"{id} has no camera")
+        async with httpx.AsyncClient(timeout=5) as c:
+            r = await c.post(f"{cfg.video['whep'].rstrip('/')}/{cameras[id]}/whep", content=await request.body(),
+                             headers={"content-type": "application/sdp"})
+        if r.status_code >= 400:
+            raise HTTPException(502, f"camera unavailable ({r.status_code})")
+        return Response(r.content, status_code=201, media_type="application/sdp")
 
     @app.post("/api/demo/{id}/{kind}", dependencies=[operator])
     async def demo(id: str, kind: str):

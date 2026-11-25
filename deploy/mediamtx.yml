@@ -1,0 +1,53 @@
+# Robot cameras for the console and the black box.
+#
+# Robots publish (or MediaMTX pulls, with `source:`) one path per camera,
+# named after the robot as in fleet.toml's `camera = "..."`. Browsers read
+# over WebRTC; the core relays the signalling so only logged-in drivers see
+# the video. Every path is recorded in 2 s fragments into /recordings, a
+# volume in RAM that keeps 75 s: the video half of the ring buffer.
+
+logLevel: warn
+
+api: false
+playback: false
+rtmp: false
+hls: false
+srt: false
+moq: false
+
+rtsp: true
+rtspAddress: :8554
+rtspTransports: [tcp]
+
+webrtc: true
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+webrtcLocalTCPAddress: ""
+# no STUN, no TURN: candidates are the PC's own LAN addresses, nothing crosses the site boundary
+webrtcICEServers2: []
+# add the site PC's LAN address here if Docker's bridge hides it, e.g. [192.168.10.5]
+webrtcAdditionalHosts: []
+
+pathDefaults:
+  record: true
+  recordPath: /recordings/%path/%Y-%m-%d_%H-%M-%S-%f_%z
+  recordFormat: fmp4
+  recordPartDuration: 500ms
+  recordSegmentDuration: 2s
+  recordDeleteAfter: 75s
+
+paths:
+  # The demo's humanoid has a simulated camera: ffmpeg's test pattern, timestamped.
+  # A real robot's entry would be `source: rtsp://192.168.10.40:8554/front` instead.
+  cam-humanoid:
+    runOnInit: >
+      ffmpeg -hide_banner -loglevel error -re -f lavfi -i testsrc2=size=960x540:rate=20
+      -c:v libx264 -preset ultrafast -tune zerolatency -g 20 -pix_fmt yuv420p
+      -f rtsp rtsp://localhost:$RTSP_PORT/$MTX_PATH
+    runOnInitRestart: true
+  cam-cleaner:
+    runOnInit: >
+      ffmpeg -hide_banner -loglevel error -re -f lavfi -i testsrc=size=960x540:rate=20
+      -c:v libx264 -preset ultrafast -tune zerolatency -g 20 -pix_fmt yuv420p
+      -f rtsp rtsp://localhost:$RTSP_PORT/$MTX_PATH
+    runOnInitRestart: true

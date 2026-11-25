@@ -4,6 +4,7 @@
     incident.json     what fired, when, on which robot
     report.html       the same, readable in any browser
     report.pdf        the same again, for the vendor's or the insurer's file
+    video/*.mp4       the robot's camera over the window, when it has one
     manifest.json     sha256 of each file above, the head of the chain, the key fingerprint
     manifest.sig      Ed25519 signature of manifest.json
     site.pub          the public key, for convenience only: verify against the copy you were given
@@ -70,13 +71,15 @@ def fingerprint(pub: Ed25519PublicKey) -> str:
     return hashlib.sha256(raw).hexdigest()[:16]
 
 
-def write(path: Path, incident: dict, records: list[dict], key: Ed25519PrivateKey) -> str:
+def write(path: Path, incident: dict, records: list[dict], key: Ed25519PrivateKey,
+          extra: dict[str, bytes] | None = None) -> str:
     linked, head = chain(records)
     files = {
         "telemetry.jsonl": b"".join(canonical(r) + b"\n" for r in linked),
         "incident.json": json.dumps(incident, indent=2).encode(),
         "report.html": report(incident, linked, head).encode(),
         "report.pdf": pdf.report(incident, linked, head),
+        **(extra or {}),
     }
     manifest = {
         "format": "rbox/1",
@@ -91,7 +94,8 @@ def write(path: Path, incident: dict, records: list[dict], key: Ed25519PrivateKe
     tmp = path.with_suffix(".part")
     with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
         for name, data in files.items():
-            z.writestr(name, data)
+            # video is already compressed; deflating it again only costs time
+            z.writestr(name, data, zipfile.ZIP_STORED if name.endswith(".mp4") else zipfile.ZIP_DEFLATED)
         z.writestr("manifest.json", mbytes)
         z.writestr("manifest.sig", key.sign(mbytes).hex())
         z.writestr("site.pub", public_pem(key.public_key()))

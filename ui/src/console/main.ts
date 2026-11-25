@@ -8,6 +8,7 @@ import { liveSource } from '../shared/live'
 import { localSource } from '../shared/local'
 import { mountMap } from '../shared/map'
 import { can, login, logout, type Me, whoami } from '../shared/session'
+import { watch } from '../shared/video'
 import type { Failure, FleetEvent, Incident, Source, Telemetry, Teleop, Zone } from '../shared/types'
 
 const $ = <T extends Element = HTMLElement>(s: string) => document.querySelector<T>(s)!
@@ -80,11 +81,37 @@ function actions(canDrive: boolean) {
     <button type="button" class="act" data-act="resume">resume</button>${drive}`
 }
 
+// -- camera: the selected robot's, bigger while someone drives it ----------
+
+let unwatch: (() => void) | null = null
+let watching: string | null = null
+async function showCamera(id: string) {
+  const robot = site.robots.find(r => r.id === id)
+  if (watching === id) return
+  unwatch?.()
+  unwatch = null
+  watching = null
+  $('.cam').hidden = !(src.live && robot?.camera && can(me, 'operator'))
+  if ($('.cam').hidden) return
+  watching = id
+  $('.cam__who').textContent = robot!.label
+  $('.cam__state').textContent = 'connecting'
+  try {
+    const stop = await watch(id, $<HTMLVideoElement>('.cam__video'))
+    if (watching !== id) return stop()
+    unwatch = stop
+    $('.cam__state').textContent = 'live, local network only'
+  } catch (err) {
+    $('.cam__state').textContent = (err as Error).message
+  }
+}
+
 const li = (id: string) => document.querySelector<HTMLElement>(`.robot[data-id="${id}"]`)!
 const select = (id: string | null) => {
   if (!id) return
   selected = id
   map.select(id)
+  showCamera(id)
   for (const el of document.querySelectorAll<HTMLElement>('.robot')) el.classList.toggle('is-on', el.dataset.id === id)
 }
 select(selected)
@@ -206,6 +233,8 @@ async function take(id: string) {
   $('.driving__who').textContent = site.robots.find(r => r.id === id)?.label ?? id
   $('.driving__cap').textContent = String(teleop.limits.linear)
   $('.driving').hidden = false
+  showCamera(id)
+  $('.cam').classList.add('is-driving')
   showHelp()
 }
 
@@ -216,6 +245,7 @@ function end(send = true) {
   s.stop()
   if (send) s.teleop.release()
   $('.driving').hidden = true
+  $('.cam').classList.remove('is-driving')
   showHelp()
 }
 

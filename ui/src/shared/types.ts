@@ -27,6 +27,7 @@ export interface Robot {
   kind: string
   protocol: 'vda5050' | 'ros2' | 'rest'
   can_drive: boolean
+  camera?: boolean
   last: Telemetry | null
 }
 

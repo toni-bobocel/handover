@@ -14,7 +14,7 @@ Linear speed is capped at 0.5 m/s and turning at 0.8 rad/s in the core, whatever
 
 One operator per robot. A second one is refused until the first releases or disconnects. Taking over pauses the robot's own autonomy first; handing back sends a stop, then resume.
 
-Video will not share this channel. Control packets are tiny and must not queue behind video frames; video needs a jitter buffer that control must not have. The plan is WebRTC through MediaMTX with host candidates only, so it works on a VLAN with no STUN or TURN server and nothing crosses the site boundary.
+Video does not share this channel. Control packets are tiny and must not queue behind video frames; video needs a jitter buffer that control must not have. It goes through MediaMTX over WebRTC with host candidates only, so it works on a VLAN with no STUN or TURN server and nothing crosses the site boundary. The browser's WHEP offer goes through the core, which checks the session; the media then flows from MediaMTX to the browser directly. The same MediaMTX records each camera in short segments to a RAM volume, which is the video half of the black box (ADR 2).
 
 ## Consequences
 

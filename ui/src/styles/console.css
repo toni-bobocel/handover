@@ -87,6 +87,18 @@ kbd { font: 10.5px var(--mono); opacity: 0.55; margin-left: 4px; }
 .driving__hud { color: var(--dim); margin-bottom: 10px; }
 .driving__hud b { color: var(--bone); font-weight: 400; font-variant-numeric: tabular-nums; }
 .driving__keys { color: var(--dim); margin-top: 10px; }
+.cam {
+  position: absolute;
+  right: 24px;
+  top: 20px;
+  width: min(380px, 40%);
+  margin: 0;
+}
+.cam[hidden] { display: none; }
+.cam__video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; outline: 1px solid var(--line); }
+.cam figcaption { margin: 8px 0 0; }
+.cam.is-driving { width: min(560px, 55%); }
+.cam.is-driving .cam__video { outline-color: var(--amber); }
 .deadman { height: 2px; background: var(--line); }
 .deadman i { display: block; height: 100%; background: var(--amber); transform-origin: left; }
 
