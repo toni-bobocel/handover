@@ -1,0 +1,26 @@
+[project]
+name = "handover-sim"
+version = "0.1.0"
+description = "Three simulated robots from three vendors, for demos and for testing the core end to end."
+requires-python = ">=3.12"
+dependencies = [
+  "aiomqtt>=2.5",
+  "websockets>=17.4",
+  "httpx>=0.28",
+  "fastapi>=0.165",
+  "uvicorn>=0.54",
+]
+
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["handover_sim*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC"]

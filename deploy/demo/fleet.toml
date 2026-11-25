@@ -1,0 +1,67 @@
+# The demo site. The core and the simulator both read this file: the core for
+# robots, zones and the floor plan, the simulator for where each robot drives
+# (the sim_* keys, which the core ignores).
+
+[site]
+name = "Demo warehouse"
+data = "/data"
+simulator = "http://simulator:7070"
+
+[rules]
+# production defaults are 15 s, 30 s and 30 s; shorter here so a demo does not wait
+blocked_after = 6
+before = 20
+after = 10
+
+[plan]
+width = 48
+height = 28
+# x, y, width, depth in metres
+racks = [
+  [6, 4, 14, 1.2], [6, 8.5, 14, 1.2], [6, 13, 14, 1.2], [6, 17.5, 14, 1.2],
+  [24, 4, 10, 1.2], [24, 8.5, 10, 1.2], [24, 13, 10, 1.2],
+]
+dock = [40, 2, 7, 7]
+charger = [2, 24]
+
+[[zone]]
+id = "dock"
+name = "Truck dock, doors open"
+polygon = [[40, 2], [47, 2], [47, 9], [40, 9]]
+margin = 1.0
+
+[[zone]]
+id = "picking"
+name = "Manual picking, morning shift"
+polygon = [[24, 18], [34, 18], [34, 24], [24, 24]]
+start = "08:00"
+end = "10:00"
+
+[[robot]]
+id = "AMR-Logistics-01"
+label = "AMR Logistics 01"
+kind = "Autonomous mobile robot"
+protocol = "vda5050"
+broker = "mosquitto"
+manufacturer = "northwind"
+serial = "amr-01"
+sim_speed = 1.2
+sim_route = [[3, 6.5], [22, 6.5], [22, 15.2], [37, 15.2], [37, 11], [38.5, 5.5], [37, 2.5], [3, 2.5]]
+
+[[robot]]
+id = "Humanoid-Inspect-02"
+label = "Humanoid Inspect 02"
+kind = "Humanoid, inspection rounds"
+protocol = "ros2"
+url = "ws://simulator:9090"
+sim_speed = 0.7
+sim_route = [[4, 11], [21, 11], [21, 16.2], [36, 16.2], [36, 26], [4, 26]]
+
+[[robot]]
+id = "Cleaner-Bot-03"
+label = "Cleaner Bot 03"
+kind = "Floor scrubber"
+protocol = "rest"
+command_url = "http://simulator:7070/robots/Cleaner-Bot-03/commands"
+sim_speed = 0.5
+sim_route = [[23, 6.5], [35, 6.5], [35, 11], [23, 11], [23, 15.6], [36, 15.6], [36, 3], [23, 3]]
