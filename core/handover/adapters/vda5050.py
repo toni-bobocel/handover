@@ -2,6 +2,7 @@ import asyncio
 import itertools
 import json
 import logging
+import os
 import uuid
 from datetime import UTC, datetime
 
@@ -29,10 +30,16 @@ class Vda5050(Adapter):
 
     async def run(self) -> None:
         host = self.cfg.get("broker", "localhost")
-        port = int(self.cfg.get("port", 1883))
+        tls = None
+        if self.cfg.get("tls"):
+            tls = aiomqtt.TLSParameters(ca_certs=self.cfg.get("ca"))
+        port = int(self.cfg.get("port", 8883 if tls else 1883))
+        # the password comes from the environment, so fleet.toml can be shared and versioned
+        password = os.environ.get(self.cfg["password_env"]) if "password_env" in self.cfg else None
         while True:
             try:
-                async with aiomqtt.Client(host, port, identifier=f"handover-{self.robot}") as client:
+                async with aiomqtt.Client(host, port, identifier=f"handover-{self.robot}", tls_params=tls,
+                                          username=self.cfg.get("username"), password=password) as client:
                     self._client = client
                     await client.subscribe(f"{self.base}/state", qos=0)
                     await client.subscribe(f"{self.base}/visualization", qos=0)

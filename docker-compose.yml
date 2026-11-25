@@ -10,6 +10,8 @@ services:
       dockerfile: core/Dockerfile
     ports:
       - "8080:8080"
+    environment:
+      - HANDOVER_MQTT_PASSWORD
     volumes:
       - ${HANDOVER_FLEET:-./deploy/demo/fleet.toml}:/etc/handover/fleet.toml:ro
       - handover-data:/data
@@ -22,8 +24,12 @@ services:
     image: eclipse-mosquitto:2.0
     ports:
       - "1883:1883"
+      - "8883:8883"
+    environment:
+      - HANDOVER_MQTT_PASSWORD
     volumes:
-      - ./deploy/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      # deploy/site/ holds the locked-down broker config for a real site
+      - ${HANDOVER_MQTT:-./deploy}:/mosquitto/config:ro
     restart: unless-stopped
     mem_limit: 32m
 

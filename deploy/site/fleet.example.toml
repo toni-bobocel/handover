@@ -1,0 +1,50 @@
+# A starting point for a real site. Copy it, fill it in, and point
+# HANDOVER_FLEET at the copy.
+
+[site]
+name = "Plant 2, hall B"
+data = "/data"
+# HTTPS with a self-signed certificate made on first start, unless data/tls/
+# already holds the plant's own. List every name and address browsers will use.
+tls = true
+tls_names = ["handover.plant.local", "192.168.10.5"]
+
+[rules]
+blocked_after = 15
+before = 30
+after = 30
+battery_low = 0.10
+
+[plan]
+width = 60
+height = 40
+racks = []
+
+[[robot]]
+id = "AMR-01"
+label = "AMR 01"
+kind = "Autonomous mobile robot"
+protocol = "vda5050"
+broker = "mosquitto"
+tls = true
+ca = "/etc/handover/ca.pem"
+username = "handover"
+password_env = "HANDOVER_MQTT_PASSWORD"
+manufacturer = "your-vendor"
+serial = "amr-01"
+
+[[robot]]
+id = "G1-01"
+label = "Humanoid 01"
+kind = "Humanoid"
+protocol = "ros2"
+url = "ws://192.168.10.40:9090"
+namespace = "/g1"
+
+[[robot]]
+id = "Scrubber-01"
+label = "Scrubber 01"
+kind = "Floor scrubber"
+protocol = "rest"
+command_url = "http://192.168.10.60/api/commands"
+token = "change-me-to-a-long-random-string"

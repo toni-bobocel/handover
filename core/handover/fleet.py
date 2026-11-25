@@ -16,6 +16,8 @@ class Config:
     plan: dict = field(default_factory=dict)
     auth: dict = field(default_factory=dict)
     sim_url: str | None = None
+    tls: bool = False
+    tls_names: list[str] = field(default_factory=list)
 
 
 def load(path: Path) -> Config:
@@ -30,6 +32,8 @@ def load(path: Path) -> Config:
         plan=raw.get("plan", {}),
         auth=raw.get("auth", {}),
         sim_url=site.get("simulator"),
+        tls=bool(site.get("tls")),
+        tls_names=site.get("tls_names", []),
     )
 
 

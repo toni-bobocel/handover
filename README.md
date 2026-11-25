@@ -31,6 +31,8 @@ docker compose exec core handover --config /etc/handover/fleet.toml users add an
 
 Accounts have one of four roles: a viewer sees the floor and the incidents, an operator also pauses and resumes robots and downloads bundles, a driver takes the wheel, an admin edits zones. Passwords are scrypt hashes in `users.toml` in the data volume; sessions are signed cookies that last twelve hours, and removing an account ends its sessions at once. REST robots can be given a token each (`token = "…"` in fleet.toml) so nothing else on the network can post positions in their name. The demo sets `[auth] open = true` and has no accounts.
 
+On a site, `tls = true` in fleet.toml serves the console over HTTPS. With no certificate from the plant's IT in `data/tls/`, the core makes a self-signed one on first start for the names in `tls_names` and logs its SHA-256 fingerprint, to be checked once when the browsers are set up. `deploy/site/` has a broker config that refuses anonymous clients and listens on TLS only, and a fleet.toml to start from; set `HANDOVER_MQTT=./deploy/site` to use it.
+
 Without Docker:
 
 ```sh

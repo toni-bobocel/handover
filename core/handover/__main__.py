@@ -13,8 +13,15 @@ def serve(a: argparse.Namespace) -> None:
     from .app import create
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    cfg = fleet.load(a.config)
+    ssl = {}
+    if cfg.tls:
+        from .tls import ensure
+
+        cert, key = ensure(cfg.data / "tls", cfg.tls_names)
+        ssl = {"ssl_certfile": str(cert), "ssl_keyfile": str(key)}
     # one worker on purpose: the ring buffers and teleop sessions live in this process
-    uvicorn.run(create(a.config), host=a.host, port=a.port, log_level="warning", ws_ping_interval=5)
+    uvicorn.run(create(a.config), host=a.host, port=a.port, log_level="warning", ws_ping_interval=5, **ssl)
 
 
 def users(a: argparse.Namespace) -> int:
