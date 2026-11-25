@@ -46,6 +46,19 @@ def users(a: argparse.Namespace) -> int:
     return 0
 
 
+def plan(a: argparse.Namespace) -> int:
+    from . import dxf
+
+    segs = dxf.read(a.drawing, scale=a.scale, layers=set(a.layer) if a.layer else None)
+    if not segs:
+        print("no LINE or LWPOLYLINE on those layers", file=sys.stderr)
+        return 1
+    info = dxf.save(segs, fleet.load(a.config).data / "plan-lines.json")
+    print(f"{info['segments']} segments, {info['width']} x {info['height']} m. "
+          f"Set [plan] width and height to at least that and restart.")
+    return 0
+
+
 def main() -> None:
     p = argparse.ArgumentParser(prog="handover")
     p.add_argument("--config", type=Path, default=Path("fleet.toml"))
@@ -59,7 +72,14 @@ def main() -> None:
     us.add_argument("name", nargs="?")
     us.add_argument("--role", default="viewer", choices=["viewer", "operator", "driver", "admin"])
 
+    pl = sub.add_parser("plan", help="import walls and racks from a DXF drawing")
+    pl.add_argument("drawing", type=Path)
+    pl.add_argument("--scale", type=float, default=0.001, help="metres per drawing unit (0.001 for millimetres)")
+    pl.add_argument("--layer", action="append", help="only these layers; repeat for several")
+
     a = p.parse_args()
+    if a.cmd == "plan":
+        sys.exit(plan(a))
     if a.cmd == "users":
         if a.action != "list" and not a.name:
             p.error("which user?")

@@ -143,9 +143,19 @@ def create(config_path: Path) -> FastAPI:
             raise HTTPException(401, "log in first")
         return {"name": u.name, "role": u.role.name, "open": open_site, "accounts": open_site or bool(users.all())}
 
+    lines_file = cfg.data / "plan-lines.json"
+    plan = {**cfg.plan, "lines": json.loads(lines_file.read_text()) if lines_file.exists() else []}
+    if cfg.plan.get("image"):
+        plan["image"] = "/api/plan/image"
+
+    @app.get("/api/plan/image", dependencies=[viewer])
+    def plan_image():
+        # relative paths are read next to fleet.toml, where the integrator put the scan
+        return FileResponse(config_path.parent / cfg.plan["image"])
+
     @app.get("/api/site", dependencies=[viewer])
     def site():
-        return {"name": cfg.site, "plan": cfg.plan, "robots": fleet.describe(), "zones": list(guard.zones.values()),
+        return {"name": cfg.site, "plan": plan, "robots": fleet.describe(), "zones": list(guard.zones.values()),
                 "demo": bool(cfg.sim_url)}
 
     @app.get("/api/incidents", dependencies=[viewer])

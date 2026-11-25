@@ -45,6 +45,11 @@ export interface Plan {
   racks: [number, number, number, number][]
   dock?: [number, number, number, number]
   charger?: [number, number]
+  /** walls from an imported DXF, metres */
+  lines?: [number, number, number, number][]
+  /** a scan of the drawing, and where it sits on the plan in metres: x, y, width, height */
+  image?: string
+  image_box?: [number, number, number, number]
 }
 
 export interface Site {

@@ -28,6 +28,14 @@ export interface MapView {
 export function mountMap(canvas: HTMLCanvasElement, plan: Plan, zones: Zone[], opts: { labels?: boolean; pad?: number } = {}): MapView {
   const ctx = canvas.getContext('2d')!
   const seen = new Map<string, Seen>()
+  let backdrop: HTMLImageElement | null = null
+  if (plan.image) {
+    const img = new Image()
+    img.onload = () => {
+      backdrop = img
+    }
+    img.src = `${import.meta.env.BASE_URL.replace(/\/$/, '')}${plan.image}`
+  }
   let selected: string | null = null
   let pick: ((id: string | null) => void) | undefined
   let planClick: ((x: number, y: number) => void) | null = null
@@ -95,6 +103,16 @@ export function mountMap(canvas: HTMLCanvasElement, plan: Plan, zones: Zone[], o
     const dpr = canvas.width / Math.max(1, canvas.getBoundingClientRect().width)
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
+    if (backdrop) {
+      const [bx, by, bw, bh] = plan.image_box ?? [0, 0, plan.width, plan.height]
+      // a drawing is dark lines on white: invert it so it sits in the console's night
+      ctx.filter = 'invert(1) grayscale(1)'
+      ctx.globalAlpha = 0.28
+      ctx.drawImage(backdrop, X(bx), Y(by), bw * scale, bh * scale)
+      ctx.filter = 'none'
+      ctx.globalAlpha = 1
+    }
+
     // floor grid, one line every two metres
     ctx.strokeStyle = `${INK}0.05)`
     ctx.lineWidth = 1
@@ -110,6 +128,17 @@ export function mountMap(canvas: HTMLCanvasElement, plan: Plan, zones: Zone[], o
     ctx.stroke()
     ctx.strokeStyle = `${INK}0.35)`
     ctx.strokeRect(X(0), Y(0), plan.width * scale, plan.height * scale)
+
+    if (plan.lines?.length) {
+      ctx.strokeStyle = `${INK}0.45)`
+      ctx.lineWidth = 1 * dpr
+      ctx.beginPath()
+      for (const [x0, y0, x1, y1] of plan.lines) {
+        ctx.moveTo(X(x0), Y(y0))
+        ctx.lineTo(X(x1), Y(y1))
+      }
+      ctx.stroke()
+    }
 
     ctx.fillStyle = `${INK}0.09)`
     ctx.strokeStyle = `${INK}0.28)`
