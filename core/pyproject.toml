@@ -1,0 +1,39 @@
+[project]
+name = "handover"
+version = "0.1.0"
+description = "One screen for a mixed robot fleet, a human takeover when one gets stuck, and a sealed record of every incident."
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.165",
+  "uvicorn[standard]>=0.54",
+  "aiomqtt>=2.5",
+  "websockets>=17.4",
+  "httpx>=0.28",
+  "cryptography>=50.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=9.2", "pytest-asyncio>=1.5", "ruff>=0.17"]
+
+[project.scripts]
+handover = "handover.__main__:main"
+rbox-verify = "handover.blackbox.bundle:verify_cli"
+
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["handover*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC"]
