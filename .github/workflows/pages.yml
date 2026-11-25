@@ -16,6 +16,8 @@ concurrency:
 
 jobs:
   build:
+    # Pages needs a public repository on this plan; until then there is nothing to deploy to
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     defaults:
       run:

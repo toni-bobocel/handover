@@ -8,3 +8,4 @@ dist/
 data/
 *.rbox
 .env
+ui/.impeccable/
