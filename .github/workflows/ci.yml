@@ -43,8 +43,15 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
-  images:
+  e2e:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - run: docker compose --profile demo build
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: pip install -e core
+      - run: docker compose --profile demo up -d --build
+      - run: python scripts/e2e.py
+      - if: failure()
+        run: docker compose logs
