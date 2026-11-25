@@ -143,10 +143,11 @@ async function incidents() {
     ? list
         .slice(0, 8)
         .map(i => {
-          const url = src.bundleUrl(i)
+          const url = can(me, 'operator') ? src.bundleUrl(i) : null
+          const pdf = can(me, 'operator') ? src.reportUrl(i) : null
           const head = i.head ? `head ${i.head.slice(0, 16)}… ${kb(i.bytes)}` : '<span class="pending">recording…</span>'
-          const name = url ? `<a class="act" href="${url}" download>${i.kind} · ${i.robot}</a>` : `<b>${i.kind} · ${i.robot}</b>`
-          return `<li>${name}<span>${new Date(i.t * 1000).toLocaleTimeString()} · ${head}</span></li>`
+          const files = url ? ` <a class="act" href="${url}" download>.rbox</a> <a class="act" href="${pdf}" download>pdf</a>` : ''
+          return `<li><b>${i.kind.replace('_', ' ')} · ${i.robot}</b><span>${new Date(i.t * 1000).toLocaleTimeString()} · ${head}${files}</span></li>`
         })
         .join('')
     : '<li><span>nothing yet, which is the point</span></li>'

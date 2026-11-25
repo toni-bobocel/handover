@@ -60,5 +60,6 @@ export async function liveSource(): Promise<Source | null> {
     fail: (robot, kind: Failure) => post(`/api/demo/${robot}/${kind}`),
     incidents: async () => (await fetch(`${base}/api/incidents`)).json() as Promise<Incident[]>,
     bundleUrl: i => (i.bundle ? `${base}/api/incidents/${i.id}/bundle` : null),
+    reportUrl: i => (i.bundle ? `${base}/api/incidents/${i.id}/report.pdf` : null),
   }
 }

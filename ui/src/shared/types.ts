@@ -78,6 +78,7 @@ export interface Source {
   fail(robot: string, kind: Failure): Promise<void>
   incidents(): Promise<Incident[]>
   bundleUrl(i: Incident): string | null
+  reportUrl(i: Incident): string | null
 }
 
 export interface Teleop {

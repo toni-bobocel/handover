@@ -99,3 +99,14 @@ def test_ring_keeps_only_its_window():
         r.push(float(t), {"t": t})
     assert len(r) == 11
     assert [x["t"] for x in r.window(25, 27)] == [25, 26, 27]
+
+
+def test_bundle_carries_a_readable_pdf(sealed, key):
+    with zipfile.ZipFile(sealed) as z:
+        body = z.read("report.pdf")
+        manifest = json.loads(z.read("manifest.json"))
+    assert body.startswith(b"%PDF-1.4") and body.rstrip().endswith(b"%%EOF")
+    assert "report.pdf" in manifest["files"]
+    # the cross-reference table must point at real objects, or viewers refuse the file
+    xref = int(body.rsplit(b"startxref", 1)[1].split()[0])
+    assert body[xref:xref + 4] == b"xref"

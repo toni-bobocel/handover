@@ -257,5 +257,6 @@ export function localSource(): Source {
     },
     incidents: async () => incidents.slice(0, 20),
     bundleUrl: () => null,
+    reportUrl: () => null,
   }
 }

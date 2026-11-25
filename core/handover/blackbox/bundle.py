@@ -2,7 +2,8 @@
 
     telemetry.jsonl   every record in the window, each carrying the hash of the one before
     incident.json     what fired, when, on which robot
-    report.html       the same, readable, printable to PDF
+    report.html       the same, readable in any browser
+    report.pdf        the same again, for the vendor's or the insurer's file
     manifest.json     sha256 of each file above, the head of the chain, the key fingerprint
     manifest.sig      Ed25519 signature of manifest.json
     site.pub          the public key, for convenience only: verify against the copy you were given
@@ -24,6 +25,8 @@ from pathlib import Path
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+
+from . import pdf
 
 GENESIS = "0" * 64
 
@@ -68,6 +71,7 @@ def write(path: Path, incident: dict, records: list[dict], key: Ed25519PrivateKe
         "telemetry.jsonl": b"".join(canonical(r) + b"\n" for r in linked),
         "incident.json": json.dumps(incident, indent=2).encode(),
         "report.html": report(incident, linked, head).encode(),
+        "report.pdf": pdf.report(incident, linked, head),
     }
     manifest = {
         "format": "rbox/1",

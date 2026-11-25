@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import time
+import zipfile
 from pathlib import Path
 
 import httpx
@@ -149,6 +150,19 @@ def create(config_path: Path) -> FastAPI:
             raise HTTPException(404, "not sealed yet")
         return FileResponse(cfg.data / "incidents" / inc["bundle"], media_type="application/zip",
                             filename=inc["bundle"])
+
+    @app.get("/api/incidents/{id}/report.pdf", dependencies=[operator])
+    def report_pdf(id: str):
+        inc = store.incident(id)
+        if not inc or not inc["bundle"]:
+            raise HTTPException(404, "not sealed yet")
+        with zipfile.ZipFile(cfg.data / "incidents" / inc["bundle"]) as z:
+            if "report.pdf" not in z.namelist():
+                raise HTTPException(404, "sealed before reports were added")
+            body = z.read("report.pdf")
+        name = inc["bundle"].removesuffix(".rbox") + ".pdf"
+        disposition = f'attachment; filename="{name}"'
+        return Response(body, media_type="application/pdf", headers={"content-disposition": disposition})
 
     @app.get("/api/site.pub", dependencies=[viewer])
     def public_key():
