@@ -14,7 +14,18 @@
     <span class="bar__site"></span>
     <span class="bar__mode"></span>
     <span class="bar__clock"></span>
+    <span class="bar__user" hidden></span>
   </header>
+
+  <form class="login" hidden>
+    <p class="mark">handover</p>
+    <p class="label">this console moves machines: log in</p>
+    <label>name <input name="name" autocomplete="username" required></label>
+    <label>password <input name="password" type="password" autocomplete="current-password" required></label>
+    <p class="login__err" aria-live="assertive"></p>
+    <button type="submit" class="act">log in</button>
+    <p class="label label--dim">No account? An admin creates one on the site PC: <code>handover users add NAME --role driver</code></p>
+  </form>
 
   <aside class="robots" aria-label="Robots">
     <p class="label">fleet</p>

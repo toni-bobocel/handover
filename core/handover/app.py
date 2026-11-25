@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import hmac
 import json
 import logging
 import os
@@ -7,13 +8,14 @@ import time
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import fleet as fleet_mod
 from .adapters import Unsupported
 from .adapters.rest import Rest
+from .auth import Role, Sessions, Throttle, User, Users
 from .blackbox import Recorder
 from .blackbox.bundle import load_key
 from .bus import Bus
@@ -49,6 +51,30 @@ def create(config_path: Path) -> FastAPI:
     ))
     teleop = Teleop(bus, fleet)
     guard = Guard(bus, fleet, [Zone.parse(z) for z in store.zones()], is_driven=teleop.driving)
+    users = Users(cfg.data / "users.toml")
+    sessions = Sessions(cfg.data / "session.key")
+    throttle = Throttle()
+    # the demo has no accounts: everyone who opens it is an admin called "demo"
+    open_site = bool(cfg.auth.get("open"))
+    COOKIE = "handover_session"
+
+    def who(cookies) -> User | None:
+        if open_site:
+            return User("demo", Role.admin)
+        name = sessions.read(cookies.get(COOKIE))
+        return users.get(name) if name else None
+
+    def need(role: Role):
+        def check(request: Request) -> User:
+            u = who(request.cookies)
+            if not u:
+                raise HTTPException(401, "log in first")
+            if u.role < role:
+                raise HTTPException(403, f"needs the {role.name} role")
+            return u
+        return check
+
+    viewer, operator, driver, admin = (Depends(need(r)) for r in Role)
 
     def shown(t: Telemetry) -> dict:
         d = t.as_dict()
@@ -82,16 +108,41 @@ def create(config_path: Path) -> FastAPI:
             raise HTTPException(404, f"no robot {id}")
         return fleet[id]
 
-    @app.get("/api/site")
+    @app.post("/api/login")
+    def login(body: dict, request: Request, response: Response):
+        ip = request.client.host if request.client else "?"
+        if throttle.blocked(ip):
+            raise HTTPException(429, "too many attempts, wait a minute")
+        u = users.login(str(body.get("name", "")), str(body.get("password", "")))
+        if not u:
+            throttle.miss(ip)
+            raise HTTPException(401, "wrong name or password")
+        response.set_cookie(COOKIE, sessions.issue(u.name), httponly=True, samesite="strict",
+                            secure=request.url.scheme == "https", max_age=12 * 3600)
+        bus.publish(Event("login", "*", {"user": u.name}))
+        return {"name": u.name, "role": u.role.name}
+
+    @app.post("/api/logout")
+    def logout(response: Response):
+        response.delete_cookie(COOKIE)
+
+    @app.get("/api/me")
+    def me(request: Request):
+        u = who(request.cookies)
+        if not u:
+            raise HTTPException(401, "log in first")
+        return {"name": u.name, "role": u.role.name, "open": open_site, "accounts": open_site or bool(users.all())}
+
+    @app.get("/api/site", dependencies=[viewer])
     def site():
         return {"name": cfg.site, "plan": cfg.plan, "robots": fleet.describe(), "zones": list(guard.zones.values()),
                 "demo": bool(cfg.sim_url)}
 
-    @app.get("/api/incidents")
+    @app.get("/api/incidents", dependencies=[viewer])
     def incidents():
         return store.incidents()
 
-    @app.get("/api/incidents/{id}/bundle")
+    @app.get("/api/incidents/{id}/bundle", dependencies=[operator])
     def download(id: str):
         inc = store.incident(id)
         if not inc or not inc["bundle"]:
@@ -99,29 +150,34 @@ def create(config_path: Path) -> FastAPI:
         return FileResponse(cfg.data / "incidents" / inc["bundle"], media_type="application/zip",
                             filename=inc["bundle"])
 
-    @app.get("/api/site.pub")
+    @app.get("/api/site.pub", dependencies=[viewer])
     def public_key():
         return FileResponse(cfg.data / "site.pub", media_type="application/x-pem-file", filename="site.pub")
 
     @app.post("/api/robots/{id}/pause")
-    async def pause(id: str):
+    async def pause(id: str, u: User = operator):
         await robot(id).pause()
-        bus.publish(Event("paused", id, {"by": "operator"}))
+        bus.publish(Event("paused", id, {"by": u.name}))
 
     @app.post("/api/robots/{id}/resume")
-    async def resume(id: str):
+    async def resume(id: str, u: User = operator):
         await robot(id).resume()
-        bus.publish(Event("resumed", id, {"by": "operator"}))
+        bus.publish(Event("resumed", id, {"by": u.name}))
 
     @app.post("/ingest/{id}")
     async def ingest(id: str, request: Request):
         a = robot(id)
         if not isinstance(a, Rest):
             raise HTTPException(409, f"{id} does not report over REST")
+        # robots are not users: each REST robot can be given its own token in fleet.toml
+        token = a.cfg.get("token")
+        given = request.headers.get("authorization", "").removeprefix("Bearer ")
+        if token and not hmac.compare_digest(given, token):
+            raise HTTPException(401, "bad robot token")
         a.ingest(await request.json())
         return {"ok": True}
 
-    @app.put("/api/zones/{id}")
+    @app.put("/api/zones/{id}", dependencies=[admin])
     async def put_zone(id: str, body: dict):
         z = Zone.parse({**body, "id": id})
         if len(z.polygon) < 3:
@@ -131,13 +187,13 @@ def create(config_path: Path) -> FastAPI:
         bus.publish(Event("zone_changed", "*", {"id": id}))
         return z
 
-    @app.delete("/api/zones/{id}")
+    @app.delete("/api/zones/{id}", dependencies=[admin])
     async def delete_zone(id: str):
         store.delete_zone(id)
         guard.zones.pop(id, None)
         bus.publish(Event("zone_changed", "*", {"id": id}))
 
-    @app.post("/api/demo/{id}/{kind}")
+    @app.post("/api/demo/{id}/{kind}", dependencies=[operator])
     async def demo(id: str, kind: str):
         if not cfg.sim_url:
             raise HTTPException(404, "not a demo site")
@@ -150,6 +206,9 @@ def create(config_path: Path) -> FastAPI:
     @app.websocket("/api/stream")
     async def stream(ws: WebSocket):
         await ws.accept()
+        if not who(ws.cookies):
+            await ws.close(code=4401, reason="log in first")
+            return
         async with bus.subscribe() as q:
             try:
                 while True:
@@ -164,10 +223,13 @@ def create(config_path: Path) -> FastAPI:
     @app.websocket("/api/teleop/{id}")
     async def drive(ws: WebSocket, id: str):
         await ws.accept()
-        operator = ws.query_params.get("operator") or (ws.client.host if ws.client else "unknown")
+        u = who(ws.cookies)
+        if not u or u.role < Role.driver:
+            await ws.close(code=4403, reason="needs the driver role")
+            return
         try:
             robot(id)
-            await teleop.take(id, operator)
+            await teleop.take(id, u.name)
         except (HTTPException, Unsupported, Busy) as e:
             await ws.close(code=4409, reason=str(getattr(e, "detail", e))[:120])
             return

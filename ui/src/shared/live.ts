@@ -37,7 +37,7 @@ export async function liveSource(): Promise<Source | null> {
     subscribe: fn => void subs.push(fn),
     take: robot =>
       new Promise<Teleop>((resolve, reject) => {
-        const s = new WebSocket(ws(`/api/teleop/${robot}?operator=${encodeURIComponent(localStorage.operator ?? 'console')}`))
+        const s = new WebSocket(ws(`/api/teleop/${robot}`))
         let closed: ((r: string) => void) | undefined
         let granted = false
         s.onmessage = e => {

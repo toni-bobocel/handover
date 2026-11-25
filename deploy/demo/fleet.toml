@@ -7,6 +7,10 @@ name = "Demo warehouse"
 data = "/data"
 simulator = "http://simulator:7070"
 
+[auth]
+# no accounts in the demo; on a real site leave this out and run `handover users add`
+open = true
+
 [rules]
 # production defaults are 15 s, 30 s and 30 s; shorter here so a demo does not wait
 blocked_after = 6

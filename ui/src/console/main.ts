@@ -7,6 +7,7 @@ import { drive } from '../shared/keys'
 import { liveSource } from '../shared/live'
 import { localSource } from '../shared/local'
 import { mountMap } from '../shared/map'
+import { can, login, logout, type Me, whoami } from '../shared/session'
 import type { Failure, FleetEvent, Incident, Source, Telemetry, Teleop } from '../shared/types'
 
 const $ = <T extends Element = HTMLElement>(s: string) => document.querySelector<T>(s)!
@@ -17,12 +18,38 @@ const STATUS: Record<string, string> = {
 const PROTO = { vda5050: 'VDA 5050 · MQTT', ros2: 'ROS 2 · rosbridge', rest: 'REST · webhooks' }
 const LOUD = new Set(['needs_assistance', 'estop', 'deadman_stop', 'zone_stop', 'link_lost', 'battery_low', 'incident_sealed'])
 
-const src: Source = (await liveSource()) ?? localSource()
+function askLogin(): Promise<Me> {
+  const form = $<HTMLFormElement>('.login')
+  form.hidden = false
+  form.querySelector('input')!.focus()
+  return new Promise(resolve => {
+    form.addEventListener('submit', async e => {
+      e.preventDefault()
+      const data = new FormData(form)
+      const got = await login(String(data.get('name')), String(data.get('password')))
+      if (typeof got === 'string') {
+        $('.login__err').textContent = got
+        return
+      }
+      form.hidden = true
+      resolve(got)
+    })
+  })
+}
+
+const found = await whoami()
+const me: Me | null = found === 'login' ? await askLogin() : found
+const src: Source = (me && (await liveSource())) || localSource()
 const { site } = src
+if (me && !me.open) {
+  $('.bar__user').hidden = false
+  $('.bar__user').innerHTML = `<b>${me.name}</b> · ${me.role} · <button type="button" class="act">log out</button>`
+  $('.bar__user button').addEventListener('click', logout)
+}
 
 $('.bar__site').textContent = site.name
 $('.bar__mode').innerHTML = src.live ? 'connected to <b>this site</b>' : 'no core found · <b>simulated in this tab</b>'
-if (site.demo) $('.demo-only').hidden = false
+if (site.demo && can(me, 'operator')) $('.demo-only').hidden = false
 setInterval(() => ($('.bar__clock').textContent = new Date().toTimeString().slice(0, 8)), 1000)
 
 const map = mountMap($<HTMLCanvasElement>('.floor__map'), site.plan, site.zones)
@@ -37,14 +64,21 @@ $('.robots__list').innerHTML = site.robots
       <span class="robot__name">${r.label}</span>
       <span class="robot__meta">${r.kind} · ${PROTO[r.protocol]}</span>
       <span class="robot__state"><b>…</b><span class="batt"><i></i></span><span class="robot__pct">–</span></span>
-      <span class="robot__acts">
-        <button type="button" class="act" data-act="pause">pause</button>
-        <button type="button" class="act" data-act="resume">resume</button>
-        ${r.can_drive ? '<button type="button" class="act" data-act="take">drive</button>' : '<span title="VDA 5050 has no velocity command">no remote driving</span>'}
-      </span>
+      <span class="robot__acts">${actions(r.can_drive)}</span>
     </li>`,
   )
   .join('')
+
+function actions(canDrive: boolean) {
+  if (!can(me, 'operator')) return ''
+  const drive = !canDrive
+    ? '<span title="VDA 5050 has no velocity command">no remote driving</span>'
+    : can(me, 'driver')
+      ? '<button type="button" class="act" data-act="take">drive</button>'
+      : ''
+  return `<button type="button" class="act" data-act="pause">pause</button>
+    <button type="button" class="act" data-act="resume">resume</button>${drive}`
+}
 
 const li = (id: string) => document.querySelector<HTMLElement>(`.robot[data-id="${id}"]`)!
 const select = (id: string | null) => {
@@ -120,7 +154,7 @@ async function incidents() {
 incidents()
 
 function showHelp() {
-  $('.assist').hidden = !help || session !== null
+  $('.assist').hidden = !help || session !== null || !can(me, 'driver')
   if (help) $('.assist__what').textContent = `${site.robots.find(r => r.id === help)?.label}: ${last.get(help)?.note || 'blocked'}`
 }
 
@@ -182,7 +216,7 @@ function end(send = true) {
 $('.assist__take').addEventListener('click', () => help && take(help))
 $('.driving__release').addEventListener('click', () => end())
 addEventListener('keydown', e => {
-  if (e.code === 'Space' && help && !session) {
+  if (e.code === 'Space' && help && !session && can(me, 'driver')) {
     e.preventDefault()
     take(help)
   } else if (e.code === 'Enter' && session) {

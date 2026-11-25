@@ -14,6 +14,7 @@ class Config:
     rules: dict = field(default_factory=dict)
     zones: list[dict] = field(default_factory=list)
     plan: dict = field(default_factory=dict)
+    auth: dict = field(default_factory=dict)
     sim_url: str | None = None
 
 
@@ -27,6 +28,7 @@ def load(path: Path) -> Config:
         rules=raw.get("rules", {}),
         zones=raw.get("zone", []),
         plan=raw.get("plan", {}),
+        auth=raw.get("auth", {}),
         sim_url=site.get("simulator"),
     )
 

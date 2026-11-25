@@ -100,6 +100,34 @@ kbd { font: 10.5px var(--mono); opacity: 0.55; margin-left: 4px; }
 .events .is-amber b { color: var(--amber); }
 .inject { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 
+.bar__user { color: var(--dim); }
+.bar__user b { font-weight: 400; color: var(--bone); }
+.login {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 14px;
+  padding: 0 max(24px, calc(50vw - 180px));
+  background: var(--night);
+}
+.login[hidden] { display: none; }
+.login label { display: grid; gap: 6px; color: var(--dim); width: 100%; }
+.login input {
+  font: 14px var(--mono);
+  color: var(--bone);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--faint);
+  padding: 6px 0;
+  outline: none;
+}
+.login input:focus { border-bottom-color: var(--amber); }
+.login__err { color: var(--amber); min-height: 1.5em; }
+.login code { color: var(--bone); }
+
 @media (max-width: 1000px) {
   body.console { grid-template-columns: 1fr; grid-template-rows: auto 60svh auto auto; height: auto; }
   .robots { order: 3; border: 0; border-top: 1px solid var(--line); }
