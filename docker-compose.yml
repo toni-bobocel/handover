@@ -1,0 +1,41 @@
+# docker compose up                   the core and the broker, for your own fleet.toml
+# docker compose --profile demo up    the same, plus three simulated robots
+#
+# Point HANDOVER_FLEET at your site's file; it defaults to the demo warehouse.
+
+services:
+  core:
+    build:
+      context: .
+      dockerfile: core/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${HANDOVER_FLEET:-./deploy/demo/fleet.toml}:/etc/handover/fleet.toml:ro
+      - handover-data:/data
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+    mem_limit: 300m
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./deploy/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped
+    mem_limit: 32m
+
+  simulator:
+    profiles: [demo]
+    build: simulator
+    volumes:
+      - ./deploy/demo/fleet.toml:/etc/handover/fleet.toml:ro
+    depends_on:
+      - core
+    restart: unless-stopped
+    mem_limit: 128m
+
+volumes:
+  handover-data:
