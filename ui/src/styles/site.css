@@ -378,7 +378,7 @@ kbd { font: 11px var(--mono); opacity: 0.55; margin-left: 6px; }
   .card--demo { grid-template-columns: 1fr; }
   .card--zones { grid-template-columns: 1fr; }
   .card--word { height: 128vw; }
-  .word { align-items: flex-start; padding-top: 24vw; }
+  .word { align-items: flex-start; padding-top: 24vw; font-size: 16.5vw; }
   .word__hand { top: -10vw; }
   .card--word__foot { flex-direction: column; align-items: flex-start; }
   .card--word__foot .small--dim { text-align: left; }
