@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>handover: a local-first console for mixed robot fleets</title>
+  <meta name="description" content="Every robot on one plan whatever its brand, a person at the controls when one gets stuck, and a signed record of the minute around every incident. Runs offline on the site PC.">
+  <meta name="theme-color" content="#0a0a0b">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0a0b'/%3E%3Cg fill='%23ecebe6'%3E%3Crect x='6' y='14' width='3' height='3'/%3E%3Crect x='10' y='14' width='3' height='3'/%3E%3Crect x='19' y='14' width='3' height='3'/%3E%3Crect x='23' y='14' width='3' height='3'/%3E%3C/g%3E%3Crect x='15' y='14' width='2' height='3' fill='%23ffa630'/%3E%3C/svg%3E">
+  <link rel="preload" href="/hands.webp" as="image">
+  <script type="module" src="/src/site/main.ts"></script>
+</head>
+<body>
+  <header class="top">
+    <a class="mark" href="#top" aria-label="handover, back to the top">handover</a>
+    <nav class="sections" aria-label="Sections">
+      <a href="#fleet">fleet</a>
+      <a href="#blackbox">blackbox</a>
+      <a href="#takeover">takeover</a>
+      <a href="#zones">zones</a>
+      <a href="#deploy">deploy</a>
+      <i class="sections__bar" aria-hidden="true"></i>
+    </nav>
+    <a class="top__src" href="https://github.com/toni-bobocel/handover">source&nbsp;↗</a>
+  </header>
+
+  <div class="rec" aria-hidden="true">
+    <span class="rec__dot"></span><span class="rec__label">rec</span><span class="rec__clock">00:00:00.0</span>
+  </div>
+
+  <main>
+    <section class="hero" id="top">
+      <div class="hero__stage">
+        <canvas class="hands" aria-hidden="true"></canvas>
+        <div class="spark" aria-hidden="true"></div>
+
+        <div class="hero__copy">
+          <h1 class="hero__title">
+            <span class="line">When a robot stops,</span>
+            <span class="line">a person takes over.</span>
+          </h1>
+          <p class="hero__lede">A console that runs on the site PC, with no internet. Every robot on one plan whatever its brand, a hand on the controls when one gets stuck, and a signed record of the minute around every incident.</p>
+        </div>
+        <p class="hero__scroll" aria-hidden="true"><span>scroll</span><i></i></p>
+
+        <aside class="win" aria-label="handover in four lines">
+          <svg class="win__frame" aria-hidden="true" preserveAspectRatio="none"><rect x="0.5" y="0.5" rx="1" /></svg>
+          <div class="win__bar">
+            <span class="win__title">HANDOVER.EXE</span>
+            <span class="win__ctl" aria-hidden="true"><i></i><i></i><i></i></span>
+          </div>
+          <div class="win__body">
+            <p class="win__meta">v0.1 · local · offline · 3 protocols</p>
+            <p class="win__line" data-text="every robot, any brand, one plan"></p>
+            <p class="win__line" data-text="take the wheel when one gets stuck"></p>
+            <p class="win__line" data-text="a signed record of every incident"></p>
+            <p class="win__cmd"><span class="win__prompt">$</span> <span data-text="docker compose --profile demo up"></span><span class="caret"></span></p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="bento" aria-label="What it does">
+      <div class="bento__head">
+        <p class="label">the console</p>
+        <p class="label label--dim">everything below runs in your browser: the same rules as the real thing, on a simulated floor</p>
+      </div>
+
+      <article class="card card--word" id="fleet">
+        <p class="label">fleet</p>
+        <h2 class="word" aria-label="handover"><span>HAND</span><span>OVER</span></h2>
+        <canvas class="word__hand" aria-hidden="true"></canvas>
+        <div class="card--word__foot">
+          <p class="small">One plan for the whole floor.<br>An AMR, a humanoid and a floor scrubber,<br>three vendors, three protocols, one screen.</p>
+          <p class="small small--dim">VDA 5050 over MQTT<br>ROS 2 through rosbridge<br>REST and webhooks</p>
+        </div>
+      </article>
+
+      <div class="grid">
+        <article class="card card--amber" id="blackbox">
+          <p class="label">blackbox</p>
+          <h3>The minute around every incident, sealed.</h3>
+          <p class="small">Sixty seconds per robot stay in memory and never touch the disk. When something fires, thirty seconds before and after are written as one signed bundle you can hand to the vendor or the insurer.</p>
+          <ol class="chain" aria-label="hash chain"></ol>
+          <p class="verify"><span>$ rbox-verify incident.rbox</span><b>OK</b></p>
+        </article>
+
+        <article class="card card--demo" id="takeover">
+          <div class="demo__head">
+            <p class="label">takeover</p>
+            <p class="label label--dim demo__hint">click a robot, or make one fail</p>
+          </div>
+          <canvas class="demo__map" aria-label="Simulated warehouse floor"></canvas>
+          <div class="demo__side">
+            <ul class="demo__robots"></ul>
+            <div class="demo__actions">
+              <button type="button" data-fail="obstacle">block the humanoid</button>
+              <button type="button" data-fail="battery">drain a battery</button>
+              <button type="button" data-fail="estop">pull an e-stop</button>
+            </div>
+            <div class="demo__assist" hidden>
+              <p class="label">needs a hand</p>
+              <p class="demo__who"></p>
+              <button type="button" class="demo__take">take the wheel <kbd>space</kbd></button>
+            </div>
+            <div class="demo__drive" hidden>
+              <p class="label">you are driving</p>
+              <p class="demo__keys">arrows or zqsd · capped at <b>0.5 m/s</b></p>
+              <div class="hud">
+                <span>speed <b class="hud__v">0.00</b> m/s</span>
+                <span>link <b class="hud__link">ok</b></span>
+              </div>
+              <div class="deadman" aria-hidden="true"><i></i></div>
+              <button type="button" class="demo__release">hand it back <kbd>enter</kbd></button>
+            </div>
+            <ol class="demo__log" aria-live="polite"></ol>
+          </div>
+        </article>
+
+        <article class="card card--stat">
+          <p class="label">footprint</p>
+          <p class="stat" data-value="74">74</p>
+          <p class="small">MB of RAM for the core with three robots streaming, measured. The budget on a site PC is 300.</p>
+        </article>
+
+        <article class="card card--stat">
+          <p class="label">dead-man</p>
+          <p class="stat" data-value="250">250</p>
+          <p class="small">ms of silence from the operator's browser and a driven robot stops.</p>
+        </article>
+
+        <article class="card card--zones" id="zones">
+          <p class="label">zones</p>
+          <svg class="zones__art" viewBox="0 0 320 150" aria-hidden="true">
+            <g class="zones__hatch"></g>
+            <rect class="zones__poly" x="196" y="22" width="104" height="106" />
+            <line class="zones__dim" x1="148" y1="118" x2="196" y2="118" />
+            <text class="zones__mm" x="172" y="138">1.00 m</text>
+            <g class="zones__bot"><circle r="5" /><line x1="0" y1="0" x2="13" y2="0" /></g>
+          </svg>
+          <p class="small">Draw a zone once. Every robot, whatever brand, stops a metre short. Zones can follow a shift: the truck dock between eight and ten, say.</p>
+        </article>
+
+        <article class="card card--stat card--amber-soft">
+          <p class="label">calls out</p>
+          <p class="stat" data-value="0">0</p>
+          <p class="small">No cloud, no CDN, no fonts from the web, no STUN server. It works on a VLAN with no route out.</p>
+        </article>
+
+        <article class="card card--stat">
+          <p class="label">speed cap</p>
+          <p class="stat" data-value="0.5">0.5</p>
+          <p class="small">m/s, the most a remote operator can ask for. Enforced by the server, not the browser.</p>
+        </article>
+
+        <article class="card card--deploy" id="deploy">
+          <p class="label">deploy</p>
+          <h3>Three minutes on the site PC.</h3>
+          <pre class="cmd"><code>docker compose --profile demo up</code></pre>
+          <p class="links">
+            <button type="button" class="copy">copy</button>
+            <a href="console.html">open the console ↗</a>
+            <a href="https://github.com/toni-bobocel/handover">read the code ↗</a>
+          </p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p>handover · MIT · Toni Bobocel, 2026</p>
+    <p class="foot__dim">The photograph at the top was generated for this page. The robots below are simulated.</p>
+  </footer>
+</body>
+</html>
