@@ -45,6 +45,7 @@ pip install -e "core[dev]" -e simulator
 handover --config fleet.toml            # http://localhost:8080
 python -m handover_sim --config fleet.toml
 pytest core && ruff check core simulator
+python scripts/e2e.py                   # against a running `docker compose --profile demo up`
 
 cd ui && pnpm install && pnpm dev       # http://localhost:5179, proxies /api to the core
 ```
@@ -77,7 +78,7 @@ With the simulator streaming three robots, the core sits at about 74 MB of RAM o
 
 ## Trade-offs and what is missing
 
-- **Video goes through MediaMTX.** Robots publish their camera to it (or it pulls them); the console plays it over WebRTC with no ICE servers, the core relays the WHEP offer so cameras follow the same accounts, and MediaMTX records every camera in 2 s segments to a RAM volume that keeps 75 s. Sealing an incident copies the overlapping segments into the bundle, hashed and signed like the rest. The segment selection and bundling are tested; the WebRTC path itself has only been checked by building the images, not yet watched end to end on a site network. ADR 3 explains why control and video travel separately.
+- **Video goes through MediaMTX.** Robots publish their camera to it (or it pulls them); the console plays it over WebRTC with no ICE servers, the core relays the WHEP offer so cameras follow the same accounts, and MediaMTX records every camera in 2 s segments to a RAM volume that keeps 75 s. Sealing an incident copies the overlapping segments into the bundle, hashed and signed like the rest. CI runs the whole demo stack in containers on every push (`scripts/e2e.py`): all three robots must report, the AMR through a real Mosquitto, MediaMTX must be recording, and a sealed incident must contain the camera and pass `rbox-verify`. What CI cannot do is watch the WebRTC stream in a browser; that part has not yet been seen on a real site network. ADR 3 explains why control and video travel separately.
 - **One process means one machine.** Ring buffers and teleop sessions live in memory. For a site with a few dozen robots that is the point; for two hundred I would split the adapters into their own processes behind a broker and keep the recorder next to them.
 - **The signature proves the bundle was not changed after the site sealed it.** It does not prove the robot told the truth, and anyone with the site's private key can sign anything. The key can sit on its own mount; a TPM would be better and is not done.
 - **Accounts are local.** A plant with SSO would want it behind its identity provider; the session check is one function to swap. Teleop would also deserve a second factor, ideally a physical enable switch next to the operator's screen.
