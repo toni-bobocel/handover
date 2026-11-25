@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>handover · console</title>
+  <meta name="theme-color" content="#0a0a0b">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0a0b'/%3E%3Cg fill='%23ecebe6'%3E%3Crect x='6' y='14' width='3' height='3'/%3E%3Crect x='10' y='14' width='3' height='3'/%3E%3Crect x='19' y='14' width='3' height='3'/%3E%3Crect x='23' y='14' width='3' height='3'/%3E%3C/g%3E%3Crect x='15' y='14' width='2' height='3' fill='%23ffa630'/%3E%3C/svg%3E">
+  <script type="module" src="/src/console/main.ts"></script>
+</head>
+<body class="console">
+  <header class="bar">
+    <a class="mark" href="./">handover</a>
+    <span class="bar__site"></span>
+    <span class="bar__mode"></span>
+    <span class="bar__clock"></span>
+  </header>
+
+  <aside class="robots" aria-label="Robots">
+    <p class="label">fleet</p>
+    <ul class="robots__list"></ul>
+  </aside>
+
+  <section class="floor" aria-label="Floor plan">
+    <canvas class="floor__map"></canvas>
+    <div class="assist" hidden>
+      <p class="label">needs a hand</p>
+      <p class="assist__what"></p>
+      <button type="button" class="act assist__take">take the wheel <kbd>space</kbd></button>
+    </div>
+    <div class="driving" hidden>
+      <p class="label">driving <span class="driving__who"></span></p>
+      <p class="driving__hud">speed <b class="driving__v">0.00</b> m/s · cap <b class="driving__cap">0.5</b> · link <b class="driving__link">ok</b></p>
+      <div class="deadman"><i></i></div>
+      <p class="driving__keys">arrows or zqsd / wasd · <button type="button" class="act driving__release">hand it back <kbd>enter</kbd></button></p>
+    </div>
+  </section>
+
+  <aside class="side" aria-label="Incidents and events">
+    <div class="side__block">
+      <p class="label">incidents</p>
+      <ol class="incidents"></ol>
+    </div>
+    <div class="side__block side__block--grow">
+      <p class="label">events</p>
+      <ol class="events" aria-live="polite"></ol>
+    </div>
+    <div class="side__block demo-only" hidden>
+      <p class="label">make something go wrong</p>
+      <p class="inject">
+        <button type="button" class="act" data-fail="obstacle">obstacle</button>
+        <button type="button" class="act" data-fail="battery">battery</button>
+        <button type="button" class="act" data-fail="estop">e-stop</button>
+        <button type="button" class="act" data-fail="link">drop the link</button>
+      </p>
+      <p class="label label--dim">applies to the selected robot</p>
+    </div>
+  </aside>
+</body>
+</html>
