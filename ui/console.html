@@ -52,6 +52,18 @@
       <p class="label">incidents</p>
       <ol class="incidents"></ol>
     </div>
+    <div class="side__block">
+      <p class="label">zones</p>
+      <ul class="zones"></ul>
+      <p class="zones__acts admin-only" hidden><button type="button" class="act zones__draw">draw a zone</button></p>
+      <form class="zone-form" hidden>
+        <p class="label label--dim zone-form__hint">click the corners on the plan, then name it</p>
+        <label>name <input name="name" required maxlength="60"></label>
+        <label class="zone-form__hours">only between <input name="start" type="time"> and <input name="end" type="time"></label>
+        <p class="zone-form__acts"><button type="submit" class="act">save</button> <button type="button" class="act zone-form__undo">undo a corner</button> <button type="button" class="act zone-form__cancel">cancel <kbd>esc</kbd></button></p>
+        <p class="zone-form__err"></p>
+      </form>
+    </div>
     <div class="side__block side__block--grow">
       <p class="label">events</p>
       <ol class="events" aria-live="polite"></ol>

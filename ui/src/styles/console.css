@@ -100,6 +100,27 @@ kbd { font: 10.5px var(--mono); opacity: 0.55; margin-left: 4px; }
 .events .is-amber b { color: var(--amber); }
 .inject { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 
+.zones { list-style: none; display: grid; gap: 6px; margin-bottom: 10px; }
+.zones li { display: flex; justify-content: space-between; gap: 12px; }
+.zones li span { color: var(--faint); }
+.zone-form { display: grid; gap: 10px; }
+.zone-form[hidden] { display: none; }
+.zone-form label { display: grid; gap: 4px; color: var(--dim); }
+.zone-form .zone-form__hours { display: block; }
+.zone-form input {
+  font: 12px var(--mono);
+  color: var(--bone);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--faint);
+  padding: 4px 0;
+  outline: none;
+  color-scheme: dark;
+}
+.zone-form input:focus { border-bottom-color: var(--amber); }
+.zone-form__acts { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.zone-form__err { color: var(--amber); }
+
 .bar__user { color: var(--dim); }
 .bar__user b { font-weight: 400; color: var(--bone); }
 .login {

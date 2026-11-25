@@ -77,6 +77,9 @@ export interface Source {
   resume(robot: string): Promise<void>
   fail(robot: string, kind: Failure): Promise<void>
   incidents(): Promise<Incident[]>
+  putZone(z: Zone): Promise<void>
+  deleteZone(id: string): Promise<void>
+  zones(): Promise<Zone[]>
   bundleUrl(i: Incident): string | null
   reportUrl(i: Incident): string | null
 }

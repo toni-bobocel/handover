@@ -8,7 +8,7 @@ import { liveSource } from '../shared/live'
 import { localSource } from '../shared/local'
 import { mountMap } from '../shared/map'
 import { can, login, logout, type Me, whoami } from '../shared/session'
-import type { Failure, FleetEvent, Incident, Source, Telemetry, Teleop } from '../shared/types'
+import type { Failure, FleetEvent, Incident, Source, Telemetry, Teleop, Zone } from '../shared/types'
 
 const $ = <T extends Element = HTMLElement>(s: string) => document.querySelector<T>(s)!
 
@@ -183,6 +183,7 @@ src.subscribe(m => {
   if ((e.kind === 'assistance_cleared' || e.kind === 'released') && help === e.robot) help = null
   if (e.kind === 'deadman_stop') $('.driving__link').textContent = 'lost'
   if (e.kind.startsWith('incident_')) incidents()
+  if (e.kind === 'zone_changed') refreshZones()
   showHelp()
 })
 
@@ -214,6 +215,84 @@ function end(send = true) {
   showHelp()
 }
 
+// -- zones ---------------------------------------------------------------
+
+let zones: Zone[] = site.zones
+let draft: [number, number][] | null = null
+
+function listZones() {
+  $('.zones').innerHTML = zones
+    .map(z => {
+      const hours = z.start ? ` · ${z.start}–${z.end}` : ''
+      const del = can(me, 'admin') ? `<button type="button" class="act" data-zone="${z.id}">delete</button>` : ''
+      return `<li><b>${z.name}<span>${hours}</span></b>${del}</li>`
+    })
+    .join('')
+  map.setZones(zones)
+}
+listZones()
+if (can(me, 'admin')) $('.admin-only').hidden = false
+
+async function refreshZones() {
+  zones = await src.zones()
+  listZones()
+}
+
+function stopDrawing() {
+  draft = null
+  map.setDraft(null)
+  map.onPlanClick(null)
+  $('.zone-form').hidden = true
+  $('.zones__acts').hidden = !can(me, 'admin')
+}
+
+$('.zones__draw').addEventListener('click', () => {
+  draft = []
+  map.setDraft(draft)
+  map.onPlanClick((x, y) => {
+    draft?.push([x, y])
+    map.setDraft(draft)
+  })
+  $('.zone-form').hidden = false
+  $('.zones__acts').hidden = true
+  $('.zone-form__err').textContent = ''
+})
+$('.zone-form__undo').addEventListener('click', () => {
+  draft?.pop()
+  map.setDraft(draft)
+})
+$('.zone-form__cancel').addEventListener('click', stopDrawing)
+$('.zone-form').addEventListener('submit', async e => {
+  e.preventDefault()
+  if (!draft || draft.length < 3) {
+    $('.zone-form__err').textContent = 'three corners at least'
+    return
+  }
+  const data = new FormData(e.target as HTMLFormElement)
+  const name = String(data.get('name')).trim()
+  const [start, end] = [String(data.get('start') ?? ''), String(data.get('end') ?? '')]
+  if (!!start !== !!end) {
+    $('.zone-form__err').textContent = 'both hours, or neither'
+    return
+  }
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `zone-${Date.now()}`
+  try {
+    await src.putZone({ id, name, polygon: draft, margin: 1, ...(start ? { start, end } : {}) })
+  } catch (err) {
+    $('.zone-form__err').textContent = (err as Error).message
+    return
+  }
+  ;(e.target as HTMLFormElement).reset()
+  stopDrawing()
+  refreshZones()
+})
+$('.zones').addEventListener('click', async e => {
+  const id = (e.target as HTMLElement).dataset.zone
+  if (!id || !confirm(`Delete the zone "${zones.find(z => z.id === id)?.name}"? Robots will no longer stop at it.`)) return
+  await src.deleteZone(id)
+  refreshZones()
+})
+
 $('.assist__take').addEventListener('click', () => help && take(help))
 $('.driving__release').addEventListener('click', () => end())
 addEventListener('keydown', e => {
@@ -223,6 +302,8 @@ addEventListener('keydown', e => {
   } else if (e.code === 'Enter' && session) {
     e.preventDefault()
     end()
+  } else if (e.code === 'Escape' && draft) {
+    stopDrawing()
   }
 })
 

@@ -19,6 +19,9 @@ export interface MapView {
   select(id: string | null): void
   onPick(fn: (id: string | null) => void): void
   setZones(z: Zone[]): void
+  /** while set, clicks go to fn as plan coordinates instead of picking robots */
+  onPlanClick(fn: ((x: number, y: number) => void) | null): void
+  setDraft(points: [number, number][] | null): void
   destroy(): void
 }
 
@@ -27,6 +30,9 @@ export function mountMap(canvas: HTMLCanvasElement, plan: Plan, zones: Zone[], o
   const seen = new Map<string, Seen>()
   let selected: string | null = null
   let pick: ((id: string | null) => void) | undefined
+  let planClick: ((x: number, y: number) => void) | null = null
+  let draft: [number, number][] | null = null
+  let hover: [number, number] | null = null
   let raf = 0
   let scale = 1
   let ox = 0
@@ -56,7 +62,21 @@ export function mountMap(canvas: HTMLCanvasElement, plan: Plan, zones: Zone[], o
     }
   }
 
+  const toPlan = (e: MouseEvent): [number, number] => {
+    const r = canvas.getBoundingClientRect()
+    const dpr = canvas.width / r.width
+    // half a metre is as precise as anyone draws a no-go zone with a mouse
+    const snap = (v: number, max: number) => Math.max(0, Math.min(max, Math.round(v * 2) / 2))
+    return [snap(((e.clientX - r.left) * dpr - ox) / scale, plan.width), snap(((e.clientY - r.top) * dpr - oy) / scale, plan.height)]
+  }
+  canvas.addEventListener('mousemove', e => {
+    hover = planClick ? toPlan(e) : null
+  })
   canvas.addEventListener('click', e => {
+    if (planClick) {
+      planClick(...toPlan(e))
+      return
+    }
     const r = canvas.getBoundingClientRect()
     const dpr = canvas.width / r.width
     const px = (e.clientX - r.left) * dpr
@@ -126,6 +146,20 @@ export function mountMap(canvas: HTMLCanvasElement, plan: Plan, zones: Zone[], o
         ctx.fillText(z.name.split(',')[0]!.toUpperCase(), X(lx) + 5 * dpr, Y(ly) + 13 * dpr)
       }
     }
+
+    if (draft) {
+      const pts = hover ? [...draft, hover] : draft
+      ctx.setLineDash([5 * dpr, 4 * dpr])
+      ctx.strokeStyle = AMBER
+      ctx.lineWidth = 1.2 * dpr
+      trace(pts)
+      if (pts.length > 2) ctx.closePath()
+      ctx.stroke()
+      ctx.setLineDash([])
+      ctx.fillStyle = AMBER
+      for (const [x, y] of draft) ctx.fillRect(X(x) - 3 * dpr, Y(y) - 3 * dpr, 6 * dpr, 6 * dpr)
+    }
+    canvas.style.cursor = planClick ? 'crosshair' : ''
 
     for (const [id, s] of seen) {
       // ease towards the last report: telemetry is 5 to 10 Hz, the screen is 60
@@ -209,6 +243,13 @@ export function mountMap(canvas: HTMLCanvasElement, plan: Plan, zones: Zone[], o
     },
     setZones(z) {
       zones = z
+    },
+    onPlanClick(fn) {
+      planClick = fn
+      hover = null
+    },
+    setDraft(points) {
+      draft = points
     },
     destroy() {
       cancelAnimationFrame(raf)

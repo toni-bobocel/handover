@@ -1,4 +1,4 @@
-import type { Failure, Incident, Site, Source, Teleop } from './types'
+import type { Failure, Incident, Site, Source, Teleop, Zone } from './types'
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '')
 const ws = (path: string) => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${base}${path}`
@@ -59,6 +59,18 @@ export async function liveSource(): Promise<Source | null> {
     resume: robot => post(`/api/robots/${robot}/resume`),
     fail: (robot, kind: Failure) => post(`/api/demo/${robot}/${kind}`),
     incidents: async () => (await fetch(`${base}/api/incidents`)).json() as Promise<Incident[]>,
+    async putZone(z) {
+      const r = await fetch(`${base}/api/zones/${encodeURIComponent(z.id)}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(z),
+      })
+      if (!r.ok) throw new Error((await r.json().catch(() => null))?.detail ?? r.statusText)
+    },
+    async deleteZone(id) {
+      await fetch(`${base}/api/zones/${encodeURIComponent(id)}`, { method: 'DELETE' })
+    },
+    zones: async () => ((await (await fetch(`${base}/api/site`)).json()) as Site).zones as Zone[],
     bundleUrl: i => (i.bundle ? `${base}/api/incidents/${i.id}/bundle` : null),
     reportUrl: i => (i.bundle ? `${base}/api/incidents/${i.id}/report.pdf` : null),
   }

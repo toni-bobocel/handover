@@ -87,3 +87,15 @@ def test_tampered_or_expired_tokens_are_refused(tmp_path, monkeypatch):
     assert s.read(t[:-2] + "xx") is None
     monkeypatch.setattr("handover.auth.time.time", lambda: 10**10)
     assert s.read(t) is None
+
+
+def test_admins_draw_zones_that_the_guard_uses_at_once(site, tmp_path):
+    client, users = site
+    users.add("root", "admin", "a very long admin password")
+    login(client, "root", "a very long admin password")
+    square = {"name": "Forklift crossing", "polygon": [[0, 0], [4, 0], [4, 4], [0, 4]], "start": "06:00", "end": "14:00"}
+    assert client.put("/api/zones/forklift", json=square).status_code == 200
+    assert [z["id"] for z in client.get("/api/site").json()["zones"]] == ["forklift"]
+    assert client.put("/api/zones/bad", json={"name": "line", "polygon": [[0, 0], [1, 1]]}).status_code == 422
+    client.delete("/api/zones/forklift")
+    assert client.get("/api/site").json()["zones"] == []

@@ -1,4 +1,4 @@
-import { plan, robots, zones } from './demo-site'
+import { plan, robots, zones as demoZones } from './demo-site'
 import type { Failure, FleetEvent, Incident, Source, Status, Telemetry, Teleop } from './types'
 
 // The demo fleet, simulated in the page. Same rules as the core, smaller:
@@ -55,6 +55,8 @@ function distToPoly(px: number, py: number, poly: [number, number][]) {
   }
   return best
 }
+
+const zones = [...demoZones]
 
 function zoneActive(z: (typeof zones)[number], now = new Date()) {
   if (!z.start || !z.end) return true
@@ -256,6 +258,18 @@ export function localSource(): Source {
       if (kind === 'link') b.silentUntil = t + 6
     },
     incidents: async () => incidents.slice(0, 20),
+    async putZone(z) {
+      const i = zones.findIndex(x => x.id === z.id)
+      if (i >= 0) zones[i] = z
+      else zones.push(z)
+      emit('zone_changed', '*', { id: z.id })
+    },
+    async deleteZone(id) {
+      const i = zones.findIndex(x => x.id === id)
+      if (i >= 0) zones.splice(i, 1)
+      emit('zone_changed', '*', { id })
+    },
+    zones: async () => [...zones],
     bundleUrl: () => null,
     reportUrl: () => null,
   }
