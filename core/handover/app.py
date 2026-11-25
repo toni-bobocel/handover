@@ -187,7 +187,7 @@ def create(config_path: Path) -> FastAPI:
             # the dead-man switch has already stopped it, or will within 250 ms
             teleop.lost(id)
 
-    ui = Path(os.environ.get("HANDOVER_UI", "ui"))
+    ui = Path(os.environ.get("HANDOVER_UI", "ui/dist"))
     if ui.is_dir():
         app.mount("/", StaticFiles(directory=ui, html=True), name="ui")
     return app
